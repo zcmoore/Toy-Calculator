@@ -8,7 +8,7 @@
 .equ STATUS_BIT_MASK		0xfffffffb	# Used to clear the uart status bit
 .equ UART_INTERRUPT_VALUE	4	# Value of the interrupt status for uart events
 .equ WAITING_STATE		0b001	# Bit used to represent this machine's "waiting for input" state
-.equ PROCESSING_STATE		0b010	# Bit used to represent this machine's "currently processing intermediate input" state
+.equ NUMBER_STATE		0b010	# State in which the last byte processed was a NUMBER
 .equ CALCULATING_STATE		0b100	# Bit used to represent this machine's "currently calculating result" state
 
 # Input classifications
@@ -18,6 +18,10 @@
 .equ CONTROL_START		3	# ASCII (
 .equ CONTROL_END		4	# ASCII )
 
+#Order of Operations
+.equ OOO_CLASS_1		1	# Classification for * and /
+.equ OOO_CLASS_2		2	# Classification for + and -
+
 li $sp, 0x10fffffc
 
 j initialize
@@ -25,6 +29,9 @@ nop
 
 state:
 	.word 0
+
+s_uart:
+	.asciiz "uart interrupt: "
 
 # Toggles the state-bit specified by $a0
 # Equivalent to (state XOR $a0)
@@ -71,30 +78,53 @@ process_byte:
 	lw $t0, 0($t0) # get the current state
 	li $t1, WAITING_STATE
 	and $t1, $t0, $t1 # check if WAITING STATE is active
-	bne $t1, $0, start_input_parsing # if WAITING, start parsing
+	bne $t1, $0, initial_input_parsing # if WAITING, start parsing
 	nop
 	j register_input_byte
 	nop
 	
-	start_input_parsing:
+	initial_input_parsing:
 		# Reset waiting bit
 		nor $t0, WAITING_STATE, $0  # mask
 		li $t1, state
 		lw $t2, 0($t1) # get the current state
 		and $t3, $t0, $t2 # new state
-		ori $t3, $t3, PROCESSING_STATE # set processing state
 		sw $t3, 0($t1)
 
 		# Push NULL to stack, to indicate stopping position
 		push $0
 	
 	register_input_byte:
+		jal libplp_uart_write # Display the number as received input
+		nop
 		jal get_input_classification
 		nop
 		li $t0, INVALID_INPUT
 		beq $v0, $t0, err_inavlid_input # if byte is invalid, err out
 		nop
+		li $t0, NUMBER
+		beq $v0, $t0, register_number
+		nop
+		li $t0, OPERATION
+		beq $v0, $t0, register_operation
+		nop
+		li $t0, CONTROL_START
+		beq $v0, $t0, register_control_start
+		nop
+		li $t0, CONTROL_END
+		beq $v0, $t0, register_control_end
+		nop
 		
+		register_number:
+			push $a0
+			jr $ra
+			nop
+		register_operation:
+			
+		register_control_start:
+			
+		register_control_end:
+			
 
 isr:
 	# Evaluate interrupt source
@@ -107,6 +137,9 @@ isr:
 	beq $t3, $0, isr_subroutine_finish
 	nop
 	# Else, process the input byte
+	jal libplp_uart_read
+	nop
+	move $a0, $v0
 	jal process_byte
 	nop
 
@@ -135,6 +168,40 @@ err_inavlid_input:
 	#TODO Handle err
 	j exit_program
 	nop
+
+#########################################
+# Returns the Order of Operations classifcation of $a0, via $v0, as represented by:
+# 	OOO_CLASS_1, OOO_CLASS_2, or INVALID_INPUT
+#########################################
+get_operation_classification:
+	li $t0, 42 # ASCII of *
+	beq $a0, $t0, classify_ooo_1
+	nop
+	li $t0, 43 # ASCII of +
+	beq $a0, $t0, classify_ooo_2
+	nop
+	li $t0, 45 # ASCII of -
+	beq $a0, $t0, classify_ooo_2
+	nop
+	li $t0, 47 # ASCII of /
+	beq $a0, $t0, classify_ooo_1
+	nop
+	j classify_invalid # Else, value is invalid
+	nop
+
+	classify_ooo_1:
+		li $v0, OOO_CLASS_1
+		addiu $v1, $v0, -48
+		jr $ra
+		nop
+	classify_ooo_2:
+		li $v0, OOO_CLASS_2
+		jr $ra
+		nop
+	classify_invalid:
+		li $v0, INVALID_INPUT
+		jr $ra
+		nop
 
 #########################################
 # Returns the input classifcation of $a0, via $v0, as represented by:

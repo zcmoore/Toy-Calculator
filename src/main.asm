@@ -91,7 +91,8 @@ process_byte:
 	
 	initial_input_parsing:
 		# Reset waiting bit
-		nor $t0, WAITING_STATE, $0  # mask to turn off WAITING bit
+		li $t4, WAITING_STATE
+		nor $t0, $t4, $0  # mask to turn off WAITING bit
 		li $t1, state
 		lw $t2, 0($t1) # get the current state
 		and $t3, $t0, $t2 # new state
@@ -239,7 +240,7 @@ get_input_classification:
 	nop
 	li $t0, 58 # (ASCII of 9) + 1
 	sltu $t1, $a0, $t0 # If value >= ((ASCII of 9) + 1) it is out of bounds
-	beq $t1, $0, classify_invalid
+	beq $t1, $0, classify_number_invalid
 	nop
 	j classify_number # Else, value is a number
 	nop
@@ -262,7 +263,7 @@ get_input_classification:
 		li $v0, OPERATION
 		jr $ra
 		nop
-	classify_invalid:
+	classify_number_invalid:
 		li $v0, INVALID_INPUT
 		jr $ra
 		nop

@@ -7,9 +7,11 @@
 .equ ENABLE_INTERUPTS		5 	# Enable global and uart interupts, ignore all others
 .equ STATUS_BIT_MASK		0xfffffffb	# Used to clear the uart status bit
 .equ UART_INTERRUPT_VALUE	4	# Value of the interrupt status for uart events
+.equ LOWER_BYTE_MASK		0x000000ff	# Masks the lower 8 bits
+
+# Machine States
 .equ WAITING_STATE		0b001	# Bit used to represent this machine's "waiting for input" state
-.equ NUMBER_STATE		0b010	# State in which the last byte processed was a NUMBER
-.equ CALCULATING_STATE		0b100	# Bit used to represent this machine's "currently calculating result" state
+.equ CALCULATING_STATE		0b010	# Bit used to represent this machine's "currently calculating result" state
 
 # Input classifications
 .equ INVALID_INPUT		0	# Any ASCII character other than 0-9 + - * / ( or )
@@ -30,8 +32,12 @@ nop
 state:
 	.word 0
 
-s_uart:
-	.asciiz "uart interrupt: "
+# The first (least significant) byte holds the previous input byte
+# The second byte holds the previous input classification
+# The third byte holds the last OPERATION input
+# The fouth byte holds the classification of the last OPERATION input
+previous_input:
+	.word 0 
 
 # Toggles the state-bit specified by $a0
 # Equivalent to (state XOR $a0)
@@ -85,11 +91,11 @@ process_byte:
 	
 	initial_input_parsing:
 		# Reset waiting bit
-		nor $t0, WAITING_STATE, $0  # mask
+		nor $t0, WAITING_STATE, $0  # mask to turn off WAITING bit
 		li $t1, state
 		lw $t2, 0($t1) # get the current state
 		and $t3, $t0, $t2 # new state
-		sw $t3, 0($t1)
+		sw $t3, 0($t1) # store the new state
 
 		# Push NULL to stack, to indicate stopping position
 		push $0

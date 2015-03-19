@@ -1,16 +1,16 @@
-li $t0, 			#load ASCII value of + sign
+li $t0, 43			#load ASCII value of + sign
 beq $t0, $a2, add		#branch to add function
 nop
 
-li $t0, 			#load ASCII value of - sign
+li $t0, 45			#load ASCII value of - sign
 beq $t0, $a2, subtract	#branch to subtraction function
 nop
 
-li $t0, 			#load ASCII value of * sign
+li $t0, 42			#load ASCII value of * sign
 beq $t0, $a2, multiply	#branch to multiplication function
 nop
 
-li $t0, 			#load ASCII value of / sign
+li $t0, 47			#load ASCII value of / sign
 beq $t0, $a2, divide		#branch to division function
 nop
 
@@ -32,8 +32,9 @@ multiply:
 nop
 
 divide:
-  j err_check #divide by zero error
-  j err_check #overflow/ underflow
+	call div		#$a0 / $a1, store result in $v0
+	j err_check #divide by zero error
+ 	j err_check #overflow/ underflow
 nop
 
 

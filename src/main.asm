@@ -14,20 +14,29 @@
 .equ CALCULATING_STATE		0b010	# Bit used to represent this machine's "currently calculating result" state
 
 # Input classifications
-.equ INVALID_INPUT		0	# Any ASCII character other than 0-9 + - * / ( or )
+.equ INVALID_INPUT		5	# Any ASCII character other than 0-9 + - * / ( or )
 .equ NUMBER			1	# ASCII characters representing [0-9] i.e. ASCII 48-57
 .equ OPERATION		2	# ASCII + * - or /
 .equ CONTROL_START		3	# ASCII (
 .equ CONTROL_END		4	# ASCII )
 
-#Order of Operations
+# Order of Operations
 .equ OOO_CLASS_1		1	# Classification for * and /
 .equ OOO_CLASS_2		2	# Classification for + and -
+
+# ASCII Identifiers
+.equ MULTIPLICATION		42	# ASCII Code for *
+.equ ADDITION		43	# ASCII Code for +
+.equ SUBTRACTION		45	# ASCII Code for -
+.equ DIVISION		47	# ASCII Code for /
+.equ OPEN_PAR		40	# ASCII Code for (
+.equ CLOSE_PAR		41	# ASCII Code for )
 
 # Enumerated Identifiers
 .equ END_OF_STACK		0
 .equ RAW_DATA		1
 .equ ASCII_DATA		2
+.equ NEGATIVE_OP		3
 
 li $sp, 0x10fffffc
 
@@ -47,6 +56,8 @@ toggle_state:
 	nop
 	li $t0, state
 	sw $v0, 0($t0)
+	jr $ra
+	nop
 
 initialize:
 	li $s5, 0
@@ -59,7 +70,12 @@ initialize:
 	sw $t1, 0($t0)
 
 	# Clear interrupt status register
-	sw $0, 4($t0) 
+	sw $0, 4($t0)
+	
+	# Set status to WAITING
+	li $t0, state
+	li $t1, WAITING_STATE
+	sw $t1, 0($t0)
 
 main:
 	addiu $s5, $s5, 1
@@ -68,13 +84,22 @@ main:
 
 #process the byte in $a0
 process_byte:
-	li $t0, state
-	lw $t0, 0($t0) # get the current state
-	li $t1, WAITING_STATE
-	and $t1, $t0, $t1 # check if WAITING STATE is active
-	bne $t1, $0, initial_input_parsing # if WAITING, start parsing
+	# Display the byte as received input
+	move $s7, $ra
+	jal libplp_uart_write
 	nop
-	j register_input_byte
+	move $ra, $s7
+	
+	# Get the current state
+	li $t0, state
+	lw $t0, 0($t0)
+
+	# Check if WAITING STATE is active
+	li $t1, WAITING_STATE
+	and $t1, $t0, $t1 
+	bne $t1, $0, initial_input_parsing # If WAITING, initialize parsing
+	nop
+	j register_input_byte # Else, continue parsing
 	nop
 	
 	initial_input_parsing:
@@ -83,15 +108,20 @@ process_byte:
 		nor $t0, $t4, $0  # mask to turn off WAITING bit
 		li $t1, state
 		lw $t2, 0($t1) # get the current state
-		and $t3, $t0, $t2 # new state
+		and $t3, $t0, $t2 # new state, turn off WAITING
 		sw $t3, 0($t1) # store the new state
 
+		move $s7, $ra
 		jal calc_begin
 		nop
+		move $ra, $s7
 	
 	register_input_byte:
-		
-
+		move $s7, $ra
+		jal calc_push_ascii
+		nop
+		jr $s7
+		nop
 			
 
 isr:
@@ -133,11 +163,17 @@ j test_div
 nop
 
 err_inavlid_input:
+err_invalid_input:
 	#TODO Handle err
 	j exit_program
 	nop
 
+err_invalid_state:
 
+err_undefined:
+	#TODO Handle err
+	j exit_program
+	nop
 
 
 

@@ -254,7 +254,6 @@ condense_stack:
 		bne $t0, $t4, check_ascii2 # If not negative operation, check for ascii
 		nop
 		# Else, perform operation on previous value, restore stack, and recurse
-		push $t1 # Grabbed too much - restore the next element's encoding
 		li $t6, calc_equation_partial
 		lw $t1, 16($t6) # Load previous value
 		li $t0, RAW_DATA # Endoding
@@ -525,10 +524,6 @@ condense_upper3:
 	nop
 
 calculate:
-	addu $v0, $a0, $a1
-	jr $ra
-	nop
-
 	li $t0, 43	#load ASCII value of + sign
 	beq $t0, $a2, add	#branch to add function
 	nop
@@ -547,29 +542,29 @@ calculate:
 	
 	#Math Operations
 	add:
-	addu $v0, $a0, $a1	#$a0 + $a1, store result in $v0
-	j err_overflow #overflow
-	nop
+		addu $v0, $a0, $a1	#$a0 + $a1, store result in $v0
+		j err_overflow #overflow
+		nop
 
 	subtract:
-	subu $v0, $a0, $a1	#$a0 - $a1, store result in $v0	
-	j eerr_underflow #underflow
-	nop
+		subu $v0, $a0, $a1	#$a0 - $a1, store result in $v0	
+		j err_underflow #underflow
+		nop
 	
 	multiply:
-	mullo $v0, $a0, $a1	#$a0 * $a1, store result in $v0
-	j err_overflow #overflow
-	nop
+		mullo $v0, $a0, $a1	#$a0 * $a1, store result in $v0
+		j err_overflow #overflow
+		nop
 	
 	divide:
-	call div	#$a0 / $a1, store result in $v0
-	nop
-	j err_division_by_zero #divide by zero error
-	nop
-	j err_overflow #overflow
-	nop
-	j err_underflow #underflow
-	nop
+		call div	#$a0 / $a1, store result in $v0
+		nop
+		j err_division_by_zero #divide by zero error
+		nop
+		j err_overflow #overflow
+		nop
+		j err_underflow #underflow
+		nop
 
 calculator_end:
 	j condense_stack

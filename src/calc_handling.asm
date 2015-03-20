@@ -23,7 +23,7 @@ add:
 
 subtract:
 	subu $v0, $a0, $a1	#$a0 - $a1, store result in $v0
-	j eerr_underflow #underflow
+	j err_underflow #underflow
 	nop
 
 multiply:

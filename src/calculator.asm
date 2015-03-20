@@ -529,3 +529,5 @@ calculate:
 	nop
 
 calculator_end:
+	j condense_stack
+	nop

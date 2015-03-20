@@ -79,6 +79,11 @@ initialize:
 
 main:
 	addiu $s5, $s5, 1
+	bne $t1, $0, main # If WAITING, loop
+	nop
+	# Else, calculate
+	jal calculator_end
+	nop
 	j main
 	nop
 
@@ -150,12 +155,20 @@ isr:
 		sw $t2, 4($t0)
 
 		# Values to enable interupts
-		li $t0, INTERUPT_CONTROLLER
-		li $t1, ENABLE_INTERUPTS
+		li $t3, INTERUPT_CONTROLLER
+		li $t4, ENABLE_INTERUPTS
+
+	# Setup for MAIN check
+	# Get the current state
+	li $t0, state
+	lw $t0, 0($t0)
+	# Check if WAITING STATE is active
+	li $t1, WAITING_STATE
+	and $t1, $t0, $t1 
 	
 		# Enable interupts AFTER returning to main code	
 		jr $ir 
-		sw $t1, 0($t0)
+		sw $t4, 0($t3)
 
 
 

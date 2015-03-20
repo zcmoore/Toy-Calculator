@@ -19,25 +19,24 @@ nop
 add:
 	addu $v0, $a0, $a1	#$a0 + $a1, store result in $v0
 	j err_overflow	#overflow
-nop
+	nop
 
 subtract:
 	subu $v0, $a0, $a1	#$a0 - $a1, store result in $v0
 	j eerr_underflow #underflow
-nop
+	nop
 
 multiply:
 	mullo $v0, $a0, $a1	#$a0 * $a1, store result in $v0
 	j err_overflow #overflow
-nop
+	nop
 
 divide:
 	call div		#$a0 / $a1, store result in $v0
-nop
+	nop
 	j err_division_by_zero #divide by zero error
-nop
+	nop
  	j err_overflow #overflow
-nop
+	nop
 	j err_underflow #underflow
-nop
-
+	nop

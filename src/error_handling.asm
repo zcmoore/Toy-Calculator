@@ -9,24 +9,28 @@
 # Index out of bounds
 
 err_overflow:
-	#TODO: verify uart portion is correct
-	sw $a0, 0(string_overflow)
+	li $t0, string_overflow
+	sw $a0, 0($t0)
 	j reset_waiting_state
 	nop
+#TODO: fix syntax? [ERROR] #22 Asm: preprocess(error_handling.asm:19): Invalid string literal.
+# this error is given with all of the .asciiz  
 string_overflow:
      	.asciiz "Error: Overflow" # null terminator inserted at end of string
 	nop
 
 err_underflow:
-	sw $a0, 0(string_underflow)
+	li $t0, string_underflow
+	sw $a0, 0($t0)
 	j reset_waiting_state
 	nop
 string_underflow:
-     	.asciiz "Error: Overflow" # null terminator inserted at end of string
+     	.asciiz "Error: Underflow" # null terminator inserted at end of string
 	nop	
 
 err_invalid_input:
-	sw $a0, string_invalid_input
+	li $t0, string_invalid_input
+	sw $a0, 0($t0)
 	j reset_waiting_state
 	nop
 string_invalid_input:
@@ -34,7 +38,8 @@ string_invalid_input:
 	nop	
 
 err_division_by_zero:
-	sw $a0, string_division_by_zero
+	li $t0, string_division_by_zero
+	sw $a0, 0($t0)
 	j reset_waiting_state
 	nop
 string_division_by_zero:
@@ -42,7 +47,8 @@ string_division_by_zero:
 	nop	
 
 err_index_out_of_bounds:
-	sw $a0, string_index_out_of_bounds
+	li $t0, string_index_out_of_bounds
+	sw $a0, 0($t0)
 	j reset_waiting_state
 	nop
 string_index_out_of_bounds:
@@ -51,11 +57,11 @@ string_index_out_of_bounds:
 
 reset_waiting_state:
 		li $t4, WAITING_STATE
-		or $t0, $t4, $1  # turn on WAITING bit
+		or $t0, $t4, 1  # turn on WAITING bit
 		li $t1, state
 		lw $t2, 0($t1) # get the current state
 		and $t3, $t0, $t2 # new state
 		sw $t3, 0($t1) # store the new state
-		#TODO: determine where the program needs to continue from or if registers need to be reset
-		jal calc_begin
+		#TODO: verify
+		jr $ra
 		nop

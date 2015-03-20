@@ -36,7 +36,8 @@ divide:
 nop
 	j err_check #divide by zero error
 nop
- 	j err_overflow #overflow/ underflow
+ 	j err_overflow #overflow
 nop
-
+	j err_underflow #underflow
+nop
 

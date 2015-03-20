@@ -590,7 +590,6 @@ calculate:
         	nop
         	jr $ra
         	nop
-		nop
 		j err_division_by_zero #divide by zero error
 		nop
 

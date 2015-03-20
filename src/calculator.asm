@@ -542,28 +542,56 @@ calculate:
 	
 	#Math Operations
 	add:
-		addu $v0, $a0, $a1	#$a0 + $a1, store result in $v0
+		addu $v0, $a0, $a1     	#$a0 + $a1, store result in $v0
+		validate_addition:
+        	li $t0, 0xFFFFFFFF
+        	subu $t0, $t0, $s6
+        	sltu $t0, $t0, $s5
+        	bne $t0, $0, err_overflow
+        	nop
+        	jr $ra
+        	nop
 		j err_overflow #overflow
 		nop
 
 	subtract:
 		subu $v0, $a0, $a1	#$a0 - $a1, store result in $v0	
+		validate_subtraction:
+		li $t0, 0xFFFFFFFF
+        	subu $t0, $t0, $s6
+        	sltu $t0, $t0, $s5
+        	bne $t0, $0, err_underflow
+        	nop
+        	jr $ra
+        	nop
 		j err_underflow #underflow
 		nop
 	
 	multiply:
 		mullo $v0, $a0, $a1	#$a0 * $a1, store result in $v0
+		validate_multiplication:
+		li $t0, 0xFFFFFFFF
+        	subu $t0, $t0, $s6
+        	sltu $t0, $t0, $s5
+        	bne $t0, $0, err_overflow
+        	nop
+        	jr $ra
+        	nop
 		j err_overflow #overflow
 		nop
 	
 	divide:
 		call div	#$a0 / $a1, store result in $v0
+		validate_division:
+		li $t0, 0xFFFFFFFF
+        	subu $t0, $t0, $s6
+        	sltu $t0, $t0, $s5
+        	bne $t0, $0, err_division_by_zero
+        	nop
+        	jr $ra
+        	nop
 		nop
 		j err_division_by_zero #divide by zero error
-		nop
-		j err_overflow #overflow
-		nop
-		j err_underflow #underflow
 		nop
 
 calculator_end:

@@ -1,0 +1,26 @@
+# needs to go before process byte?
+
+  lw $a0, 0($t0) # get current state value
+  beq $a0, 0(WAITING_STATE) # compare to waiting state?
+nop
+  li $t0, state
+	sw $v0, 0(var_waiting_message)
+nop
+  var_waiting_message:
+    .asciiz "Waiting...\n" # waiting message
+    
+# needs to go right after process byte before parsing starts?
+
+  lw $a0, 0($t0) # get current state value
+  beq $a0, 0(CALCULATING_STATE) # if calculating state..
+nop
+  li $t0, state
+  sw $v0, 0(var_calculating_message)
+nop
+  var_calculating_message:
+    .asciiz "Receiving" # receiving bytes message
+    
+
+  
+
+

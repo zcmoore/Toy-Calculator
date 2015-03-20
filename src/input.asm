@@ -70,7 +70,7 @@ get_operation_classification:
 
 #########################################
 # Returns the input classifcation of $a0, via $v0, as represented by:
-# 	NUMBER, OPERATION, CONTROL, or INVALID_INPUT
+# 	NUMBER, OPERATION, CONTROL_START, CONTROL_END, or INVALID_INPUT
 # If the value is a NUMBER, the numeric value will be stored in $v1
 #########################################
 get_input_classification:

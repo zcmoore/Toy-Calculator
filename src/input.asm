@@ -114,7 +114,7 @@ get_input_classification:
 		nop
 	classify_number:
 		li $v0, NUMBER
-		addiu $v1, $v0, -48
+		addiu $v1, $a0, -48
 		jr $ra
 		nop
 	classify_operation:

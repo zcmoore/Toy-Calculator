@@ -254,6 +254,7 @@ condense_stack:
 		bne $t0, $t4, check_ascii2 # If not negative operation, check for ascii
 		nop
 		# Else, perform operation on previous value, restore stack, and recurse
+		push $t1 # Grabbed too much - restore the next element's encoding
 		li $t6, calc_equation_partial
 		lw $t1, 16($t6) # Load previous value
 		li $t0, RAW_DATA # Endoding

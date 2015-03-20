@@ -34,7 +34,7 @@ nop
 divide:
 	call div		#$a0 / $a1, store result in $v0
 nop
-	j err_check #divide by zero error
+	j err_division_by_zero #divide by zero error
 nop
  	j err_overflow #overflow
 nop

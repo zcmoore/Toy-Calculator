@@ -28,7 +28,7 @@ nop
 
 multiply:
 	mullo $v0, $a0, $a1	#$a0 * $a1, store result in $v0
-	j err_check #overflow
+	j err_overflow #overflow
 nop
 
 divide:
@@ -36,7 +36,7 @@ divide:
 nop
 	j err_check #divide by zero error
 nop
- 	j err_check #overflow/ underflow
+ 	j err_overflow #overflow/ underflow
 nop
 
 

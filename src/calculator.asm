@@ -11,7 +11,7 @@ calc_push_ascii:
 
 	# Validate input
 	li $t0, INVALID_INPUT
-	beq $v0, $t0, err_inavlid_input # If byte is invalid, err out
+	beq $v0, $t0, err_invalid_input # If byte is invalid, err out
 	nop
 	
 	##Expected state: ascii code is in $a0, classification is in $v0, number value (if applicable) is in $v1
@@ -203,76 +203,221 @@ condense_stack:
 	li $t0, var_condense_stack_return_address
 	sw $ra, 0($t0)
 	
+	
 	condense_stack_recursive:
-		# Populate partial equation
-		jal condense_stack_store_last5
+	# Clear current partial equation
+	li $t0, calc_equation_partial
+	li $t1, calc_equation_partial_encoding
+	sw $0, 0($t0)
+	sw $0, 4($t0)
+	sw $0, 8($t0)
+	sw $0, 12($t0)
+	sw $0, 16($t0)
+	sw $0, 0($t1)
+	sw $0, 4($t1)
+	sw $0, 8($t1)
+	sw $0, 12($t1)
+	sw $0, 16($t1)
+		vlidate_first:
+		# First element (from the right) should always be a number
+		pop $t0 # Encoding
+		beq $t0, $0, err_invalid_state # Reached end of stack prematurly
+		nop
+		li $t1, ASCII_DATA
+		beq $t0, $t1, err_invalid_input # Indicates a case such as: ...+) or ...*) or ...() etc.
+		nop
+		li $t1, NEGATIVE_OP
+		beq $t0, $t1, err_invalid_input # Indicates a case such as ...-)
+		nop
+		#Else, encoding is RAW
+		li $t1, calc_equation_partial_encoding
+		li $t2, calc_equation_partial
+		sw $t0, 16($t1) # Store partial equation encoding
+		pop $t0 # Value
+		sw $t0, 16($t2) # Store value
+		
+		validate_second:
+		# Second element (from right) should be an operation, negative, open parenthesis, or end of stack
+		pop $t0 # Encoding
+		pop $t1 # Value
+		li $t5, calc_equation_partial_encoding
+		li $t6, calc_equation_partial
+		sw $t0, 12($t5) # Store encoding
+		sw $t1, 12($t6) # Store value
+
+		beq $t0, $0, end_of_stack # Reached end of stack
+		nop
+		li $t4, RAW_DATA
+		beq $t0, $t4, err_invalid_state # Two numbers should not be stacked against each other
+		nop
+		li $t4, NEGATIVE_OP
+		bne $t0, $t4, check_ascii2 # If not negative operation, check for ascii
+		nop
+		# Else, perform operation on previous value, restore stack, and recurse
+		li $t6, calc_equation_partial
+		lw $t1, 16($t6) # Load previous value
+		li $t0, RAW_DATA # Endoding
+		li $t2, -1
+		mullo $t1, $t1, $t2 # Multiply previous by -1
+		push $t1
+		push $t0
+		j condense_stack_recursive #recurse
 		nop
 
-		# TODO: evaluate all negative_operators
-		
-		# Evaluate Open-Parenthesis
-		li $t0, calc_equation_partial
-		lw $t1, 0($t0) # Value of first element
-		li $t2, OPEN_PAR # ASCII Value of '('
-		beq $t1, $t2, err_inavlid_input
-		nop
-		
-		lw $t1, 4($t0) # Value of second element
-		li $t2, OPEN_PAR # ASCII Value of '('
-		beq $t1, $t2, condense_stack_return
-		nop
-		
-		lw $t1, 8($t0) # Value of third element
-		li $t2, OPEN_PAR # ASCII Value of '('
-		beq $t1, $t2, err_inavlid_input
-		nop
-		
-		lw $t1, 12($t0) # Value of fourth element
-		li $t2, OPEN_PAR # ASCII Value of '('
-		beq $t1, $t2, condense_lower3
-		nop
-		
-		lw $t1, 16($t0) # Value of fifth element
-		li $t2, OPEN_PAR # ASCII Value of '('
-		beq $t1, $t2, err_inavlid_input
-		nop
-		
-		
-		# Validate State. 
-		#If fourth element in calc_equation_partial_encoding is not ASCII, input is invalid
-		li $t0, calc_equation_partial
-		li $t1, calc_equation_partial_encoding
-		lw $t2, 12($t1) # Encoding of fourth element
-		li $t4, ASCII_DATA
-		bne $t2, $t4, err_inavlid_input
-		nop
-		#If fifth and third elements in calc_equation_partial_encoding are not RAW, input is invalid
-		lw $t2, 8($t1) # Encoding of third element
-		li $t4, RAW_DATA
-		bne $t2, $t4, err_inavlid_input
-		nop
-		lw $t2, 16($t1) # Encoding of fifth element
-		li $t4, RAW_DATA
-		bne $t2, $t4, err_inavlid_input
-		nop
-		
+		check_ascii2:
 		# Evaluate Order of Operations
-		lw $a0, 12($t0) # Value of fourth element
-		jal get_operation_classification # Stores op classification in $v0	
-		nop	
-		li $t4, OOO_CLASS_1
-		beq $v0, $t4, condense_lower3 # If operator is */, it takes priority
+		# Value of operator is in $t1
+		li $t4, MULTIPLICATION
+		beq $t1, $t4, condense_stack_subroutine_operate # If operator is *, it takes priority
 		nop
-		# Else, evaluate second element
-		li $t0, calc_equation_partial
-		lw $a0, 12($t0) # Value of second element
-		jal get_operation_classification # Stores op classification in $v0	
-		nop	
-		li $t4, OOO_CLASS_1
-		beq $v0, $t4, condense_upper3 # If operator is */, it takes priority
+		li $t4, DIVISION
+		beq $t1, $t4, condense_stack_subroutine_operate # If operator is /, it takes priority
 		nop
-		#Else, lower operation is clear to process
-		j condense_lower3
+		li $t4 OPEN_PAR
+		bne $t1, $t4, validate_third # If not (, continue parsing
+		nop
+		# Else, remove open operator push the previous number, and return
+		li $t6, calc_equation_partial
+		lw $t1, 16($t6) # Load value of first number (from right)
+		push $t1 # Previous Value
+		j condense_stack_return
+		nop
+
+		validate_third:
+		# Third element (from the right) should always be a number
+		pop $t0 # Encoding
+		beq $t0, $0, err_invalid_state # Reached end of stack prematurly
+		nop
+		li $t1, ASCII_DATA
+		beq $t0, $t1, err_inavlid_input # Indicates a case such as: ...++) or ...-+) or (+... etc.
+		nop
+		li $t1, NEGATIVE_OP
+		beq $t0, $t1, err_invalid_input # Indicates a case such as ...-*)
+		nop
+		#Else, encoding is RAW
+		li $t1, calc_equation_partial_encoding
+		li $t2, calc_equation_partial
+		sw $t0, 8($t1) # Store partial equation encoding
+		pop $t0 # Value
+		sw $t0, 8($t2) # Store value
+		
+		validate_fourth:
+		# Fourth element (from right) should be an operation, negative, open parenthesis, or end of stack
+		pop $t0 # Encoding
+		pop $t1 # Value
+		li $t5, calc_equation_partial_encoding
+		li $t6, calc_equation_partial
+		sw $t0, 4($t5) # Store encoding
+		sw $t1, 4($t6) # Store value
+		# Validate
+		beq $t0, $0, condense_lower3_restore_null_return # Reached end of stack; process bottom 3
+		nop
+		li $t4, RAW_DATA
+		beq $t0, $t4, err_invalid_state # Cannot have 2 numbers directly adjacent to one another
+		nop
+		li $t4, NEGATIVE_OP
+		bne $t0, $t4, check_ascii4 # If not negative operation, check for ascii
+		nop
+		# Else, perform operation on previous value, restore stack, and recurse
+		li $t5, calc_equation_partial_encoding
+		li $t6, calc_equation_partial
+		# Combine & Push elements 3 and 4
+		lw $t1, 8($t6) # Load previous value
+		li $t0, RAW_DATA # Endoding
+		li $t2, -1
+		mullo $t1, $t1, $t2 # Multiply previous by -1
+		push $t1
+		push $t0
+		# Restore element 2
+		lw $t0, 12($t5) # 2nd element encoding
+		lw $t1, 12($t6) # 2nd element value
+		push $t1
+		push $t0
+		# Restore element 1
+		lw $t0, 16($t5) # 1st element encoding
+		lw $t1, 16($t6) # 1st element value
+		push $t1
+		push $t0
+		# Recurse
+		j condense_stack_recursive
+		nop
+
+		check_ascii4:
+		# Evaluate Order of Operations
+		# Value of operator is in $t1
+		li $t4, MULTIPLICATION
+		beq $t1, $t4, condense_stack_subroutine_operate_top # If operator is *, it takes priority
+		nop
+		li $t4, DIVISION
+		beq $t1, $t4, condense_stack_subroutine_operate_top # If operator is /, it takes priority
+		nop
+		li $t4 OPEN_PAR
+		beq $t1, $t4, condense_lower3_return # If (, remove the open operator, perform the previous operation, and return
+		nop
+		# Else, restore operator and perform bottom 3 operation, then recurse
+		push $t1 # Value
+		push $t0 # Encoding
+		j condense_lower3_recurse
+		nop
+		
+		
+	condense_stack_subroutine_operate:
+		move $a2, $t1 # Load operator as argument
+		li $t6, calc_equation_partial
+		lw $a1, 16($t6) # Load previous value as second operand
+		pop $a0 # Previous encoding
+		li $t4, RAW_DATA
+		bne $a0, $t4, err_invalid_input #previous should be number
+		nop
+		pop $a0 # Previous value; use as first operand
+		jal calculate
+		nop
+		li $t4, RAW_DATA # Encoding
+		push $v0 # Result Value
+		push $t4 # Result Encoding
+		j condense_stack_recursive #recurse
+		nop
+
+	condense_stack_subroutine_operate_top:
+		move $a2, $t1 # Load operator as argument
+		li $t6, calc_equation_partial
+		lw $a1, 8($t6) # Load previous value as second operand
+		pop $a0 # Previous encoding
+		li $t4, RAW_DATA
+		bne $a0, $t4, err_invalid_input #previous should be number
+		nop
+		pop $a0 # Previous value; use as first operand
+		jal calculate
+		nop
+		li $t4, RAW_DATA # Encoding
+		push $v0 # Result Value
+		push $t4 # Result Encoding
+		j condense_stack_recursive #recurse
+		nop
+		# Restore element 2
+		lw $t0, 12($t5) # 2nd element encoding
+		lw $t1, 12($t6) # 2nd element value
+		push $t1
+		push $t0
+		# Restore element 1
+		lw $t0, 16($t5) # 1st element encoding
+		lw $t1, 16($t6) # 1st element value
+		push $t1
+		push $t0
+		# Recurse
+		j condense_stack_recursive
+		nop
+
+	end_of_stack:
+		push $0 # Restore stack termination element
+		# Restore first value
+		li $t5, calc_equation_partial_encoding
+		li $t6, calc_equation_partial
+		lw $t0, 16($t5) # Encoding of first element
+		lw $t1, 16($t6) # Value of first element
+		push $t1
+		push $t0
+		j condense_stack_return
 		nop
 
 	condense_stack_return:
@@ -285,10 +430,9 @@ condense_stack:
 
 # Psuedo-Code:
 # 	Process the last 3 elements (NUMBER, OPERATION, NUMBER)
-# 	Restore first 2 elements to stack
 # 	Push new element to stack
 # 	Continue recursion
-condense_lower3:
+condense_lower3_recurse:
 	# Get arguments & perform calculation
 	li $t0, calc_equation_partial
 	lw $a0, 8($t0) # First Operand
@@ -303,22 +447,42 @@ condense_lower3:
 	li $t0, calc_equation_partial
 	li $t1, calc_equation_partial_encoding
 
-	lw $t2, 0($t0) # Value
-	lw $t3, 0($t1) # Encoding
-	push $t2
-	push $t3
-
-	lw $t2, 4($t0) # Value
-	lw $t3, 4($t1) # Encoding
-	push $t2
-	push $t3
-
 	move $t2, $v0 # Value
 	li $t3, RAW_DATA # Encoding
 	push $t2
 	push $t3
 	
 	j condense_stack_recursive
+	nop
+
+
+condense_lower3_restore_null_return:
+	push $0
+# Psuedo-Code:
+# 	Process the last 3 elements (NUMBER, OPERATION, NUMBER)
+# 	Push new element to stack
+# 	return 
+condense_lower3_return:
+	# Get arguments & perform calculation
+	li $t0, calc_equation_partial
+	lw $a0, 8($t0) # First Operand
+	lw $a2, 12($t0) # Operator
+	lw $a1, 16($t0) # Second Operand
+	move $s4, $ra
+	jal calculate
+	nop
+	move $ra, $s4
+	
+	# Restore stack
+	li $t0, calc_equation_partial
+	li $t1, calc_equation_partial_encoding
+
+	move $t2, $v0 # Value
+	li $t3, RAW_DATA # Encoding
+	push $t2
+	push $t3
+	
+	j condense_stack_return
 	nop
 
 # Psuedo-Code:
@@ -357,63 +521,6 @@ condense_upper3:
 	push $t3
 	
 	j condense_stack_recursive
-	nop
-
-# Pop the last 5 elements in the stack and their encodings
-# into calc_equation_partial and calc_equation_partial_encoding
-condense_stack_store_last5:
-	li $t0, calc_equation_partial
-	li $t1, calc_equation_partial_encoding
-	
-	# Clear current partial
-	sw $0, 0($t0)
-	sw $0, 4($t0)
-	sw $0, 8($t0)
-	sw $0, 12($t0)
-	sw $0, 16($t0)
-	sw $0, 0($t1)
-	sw $0, 4($t1)
-	sw $0, 8($t1)
-	sw $0, 12($t1)
-	sw $0, 16($t1)
-	
-	pop $t2 # Encoding
-	pop $t3 # Value
-	beq $0, $t2, store_return
-	nop
-	sw $t3, 16($t0)
-	sw $t2, 16($t1)
-	
-	pop $t2 # Encoding
-	pop $t3 # Value
-	beq $0, $t2, store_return
-	nop
-	sw $t3, 12($t0)
-	sw $t2, 12($t1)
-	
-	pop $t2 # Encoding
-	pop $t3 # Value
-	beq $0, $t2, store_return
-	nop
-	sw $t3, 8($t0)
-	sw $t2, 8($t1)
-	
-	pop $t2 # Encoding
-	pop $t3 # Value
-	beq $0, $t2, store_return
-	nop
-	sw $t3, 4($t0)
-	sw $t2, 4($t1)
-	
-	pop $t2 # Encoding
-	pop $t3 # Value
-	beq $0, $t2, store_return
-	nop
-	sw $t3, 0($t0)
-	sw $t2, 0($t1)
-	
-	store_return:
-	jr $ra
 	nop
 
 calculate:

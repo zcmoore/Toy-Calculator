@@ -4,18 +4,18 @@
 .equ SWITCHES		0xf0100000 	# switches
 .equ LEDS 			0xf0200000 	# LEDs
 .equ INTERUPT_CONTROLLER	0xf0700000 	# Interrupt Controller
-.equ ENABLE_INTERUPTS		5 	# Enable global and uart interupts, ignore all others
-.equ STATUS_BIT_MASK		0xfffffffb	# Used to clear the uart status bit
-.equ UART_INTERRUPT_VALUE	4	# Value of the interrupt status for uart events
-.equ LOWER_BYTE_MASK		0x000000ff	# Masks the lower 8 bits
+.equ ENABLE_INTERUPTS	5	 	# Enable global and uart interupts, ignore all others
+.equ STATUS_BIT_MASK		0xfffffffb		# Used to clear the uart status bit
+.equ UART_INTERRUPT_VALUE	4		# Value of the interrupt status for uart events
+.equ LOWER_BYTE_MASK		0x000000ff		# Masks the lower 8 bits
 
 # Machine States
-.equ WAITING_STATE		0b001	# Bit used to represent this machine's "waiting for input" state
-.equ CALCULATING_STATE		0b010	# Bit used to represent this machine's "currently calculating result" state
+.equ WAITING_STATE		0b001		# Bit used to represent this machine's "waiting for input" state
+.equ CALCULATING_STATE	0b010		# Bit used to represent this machine's "currently calculating result" state
 
 # Input classifications
 .equ INVALID_INPUT		5	# Any ASCII character other than 0-9 + - * / ( or )
-.equ NUMBER			1	# ASCII characters representing [0-9] i.e. ASCII 48-57
+.equ NUMBER		1	# ASCII characters representing [0-9] i.e. ASCII 48-57
 .equ OPERATION		2	# ASCII + * - or /
 .equ CONTROL_START		3	# ASCII (
 .equ CONTROL_END		4	# ASCII )
@@ -43,6 +43,13 @@ li $sp, 0x10fffffc
 j initialize
 nop
 
+##Statuses
+const_waiting_state_string:
+	.asciiz "Waiting...\n"
+processing_state_string:
+	.asciiz "Processing...\n"
+##
+	
 state:
 	.word 0
 
@@ -60,6 +67,10 @@ toggle_state:
 	nop
 
 initialize:
+	#Print that the calculator is now in the waiting state 
+	li $a0, const_waiting_state_string
+	jal libplp_uart_write_string
+	nop
 	li $s5, 0
 	# Goto isr when interrupts occur
 	li $iv, isr
@@ -130,6 +141,10 @@ process_byte:
 			
 
 isr:
+	#print that the program is now in the "Processing" state
+	li $a0, processing_state_string
+	jal libplp_uart_write_string
+	nop
 	# Evaluate interrupt source
 	li $t0, INTERUPT_CONTROLLER
 	li $t2, UART_INTERRUPT_VALUE
@@ -158,7 +173,7 @@ isr:
 		li $t3, INTERUPT_CONTROLLER
 		li $t4, ENABLE_INTERUPTS
 
-	# Setup for MAIN check
+	## Setup for MAIN check
 	# Get the current state
 	li $t0, state
 	lw $t0, 0($t0)
@@ -174,19 +189,6 @@ isr:
 
 j test_div
 nop
-
-err_inavlid_input:
-err_invalid_input:
-	#TODO Handle err
-	j exit_program
-	nop
-
-err_invalid_state:
-
-err_undefined:
-	#TODO Handle err
-	j exit_program
-	nop
 
 
 

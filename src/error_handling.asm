@@ -25,44 +25,61 @@ string_division_by_zero:
 
 string_index_out_of_bounds:
      	.asciiz "Error: Index out of bounds"
+string_invalid_state:
+     	.asciiz "Error: Invalid State"
+string_undefined:
+     	.asciiz "Error: Undefined"
 
 err_overflow:
-	li $t0, string_overflow
-	sw $a0, 0($t0)
+	li $a0, string_overflow
+	j libplp_uart_write_string
+	nop
 	j reset_waiting_state
 	nop
 
 err_underflow:
-	li $t0, string_underflow
-	sw $a0, 0($t0)
+	li $a0, string_underflow
+	j libplp_uart_write_string
+	nop
 	j reset_waiting_state
 	nop
 
 # This misspelling appears throughout the code, and should be replaced.
 err_inavlid_input:
 err_invalid_input:
-	li $t0, string_invalid_input
-	sw $a0, 0($t0)
+	li $a0, string_invalid_input
+	j libplp_uart_write_string
+	nop
 	j reset_waiting_state
 	nop
 
 err_division_by_zero:
-	li $t0, string_division_by_zero
-	sw $a0, 0($t0)
+	li $a0, string_division_by_zero
+	j libplp_uart_write_string
+	nop
 	j reset_waiting_state
 	nop
 
 err_index_out_of_bounds:
-	li $t0, string_index_out_of_bounds
-	sw $a0, 0($t0)
+	li $a0, string_index_out_of_bounds
+	j libplp_uart_write_string
+	nop
 	j reset_waiting_state
 	nop
 
 err_invalid_state:
-	# TODO
+	li $a0, string_invalid_state
+	j libplp_uart_write_string
+	nop
+	j reset_waiting_state
+	nop
 
 err_undefined:
-	# TODO
+	li $a0, string_undefined
+	j libplp_uart_write_string
+	nop
+	j reset_waiting_state
+	nop
 
 reset_waiting_state:
 	#print "Done! Ready for the next input."
@@ -76,7 +93,7 @@ reset_waiting_state:
 		and $t3, $t0, $t2 # new state
 		sw $t3, 0($t1) # store the new state
 		#TODO: verify
-		jr $ra
+		j main
 		nop
 
 error_handling_end:

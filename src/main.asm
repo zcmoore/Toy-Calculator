@@ -48,6 +48,8 @@ const_waiting_state_string:
 	.asciiz "Waiting...\n"
 processing_state_string:
 	.asciiz "Processing...\n"
+complete_string:
+	.asciiz "\nDone! Waiting for the next input."
 ##
 	
 state:

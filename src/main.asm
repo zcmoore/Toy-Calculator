@@ -50,6 +50,8 @@ processing_state_string:
 	.asciiz "Processing...\n"
 complete_string:
 	.asciiz "\nDone! The answer is:"
+recurse_string:
+	.asciiz "\nReady for the next set of input..."
 ##
 	
 state:

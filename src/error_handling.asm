@@ -82,8 +82,15 @@ err_undefined:
 	nop
 
 reset_waiting_state:
-	#print "Done! Ready for the next input."
+	#print "Done! The answer is:"
 	li $a0, complete_string
+	jal libplp_uart_write_string
+	nop
+	#Resets the input values and answer
+	li $v0, 0
+	li $v1, 0
+	li $a0, 0
+	li $a0, recurse_string
 	jal libplp_uart_write_string
 	nop
 		li $t4, WAITING_STATE

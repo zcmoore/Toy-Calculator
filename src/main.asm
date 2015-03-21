@@ -45,9 +45,9 @@ nop
 
 ##Statuses
 const_waiting_state_string:
-	.asciiz "Waiting...\n"
+	.asciiz "\nWaiting...\n"
 processing_state_string:
-	.asciiz "Processing...\n"
+	.asciiz "\nProcessing...\n"
 complete_string:
 	.asciiz "\nDone! The answer is:"
 recurse_string:

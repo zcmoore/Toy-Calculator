@@ -65,6 +65,10 @@ err_undefined:
 	# TODO
 
 reset_waiting_state:
+	#print "Done! Ready for the next input."
+	li $a0, complete_string
+	jal libplp_uart_write_string
+	nop
 		li $t4, WAITING_STATE
 		ori $t0, $t4, 1  # turn on WAITING bit
 		li $t1, state
